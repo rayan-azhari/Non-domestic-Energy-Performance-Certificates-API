@@ -1,0 +1,53 @@
+---
+title: "Non-Domestic Certificates and Recommendations Summary"
+author: "Your Name"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+
+```
+
+Certificates Summary
+Overview
+This section provides an overview of the fetched non-domestic certificates.
+```{r}
+certificates <- read.csv("non_domestic_certificates.csv")
+summary(certificates)
+
+```
+
+Address Distribution
+```{r}
+ggplot(certificates, aes(x = address)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Distribution of Certificates by Address", x = "Address", y = "Count")
+
+```
+
+Recommendations Summary
+Overview
+This section provides an overview of the fetched recommendations.
+```{r}
+recommendations <- read.csv("non_domestic_recommendations.csv")
+summary(recommendations)
+
+```
+
+Improvement Descriptions
+```{r}
+ggplot(recommendations, aes(x = improvement_description)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Distribution of Recommendations by Improvement Description", x = "Improvement Description", y = "Count")
+
+```
+
+
+
+
