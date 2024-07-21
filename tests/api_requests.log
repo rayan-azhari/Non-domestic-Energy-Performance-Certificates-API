@@ -1,0 +1,2 @@
+INFO [2024-07-20 13:03:06] Requesting data with parameters: 1000
+ERROR [2024-07-20 13:03:06] Error in Non-domestic Search API: HTTP 401 - Not authorized.
