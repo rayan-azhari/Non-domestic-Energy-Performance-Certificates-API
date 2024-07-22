@@ -4,63 +4,82 @@
 library(httr)
 library(jsonlite)
 library(dplyr)
+library(purrr)
+library(tidyr)
 
 # Define the API endpoint and authentication
 base_url <- "https://epc.opendatacommunities.org/api/v1"
 api_endpoint <- paste0(base_url, "/non-domestic/search")
 cert_endpoint <- paste0(base_url, "/non-domestic/certificate")
 rec_endpoint <- paste0(base_url, "/non-domestic/recommendations")
-api_key <- "<your_api_key>"
-auth_header <- paste("Basic", base64_enc(paste("<your_email>", api_key, sep=":")))
+auth_token <- "cmF5YW4uYXpoYXJpLjE3QHVjbC5hYy51azo3Yzg3ZjY0MGQ5ZDA0MWY0MjY4MTE0YWU1YjlhY2Q3NzVkYzJiOGM3"
+auth_header <- paste("Basic", auth_token)
 
-# Initialize an empty dataframe to store results
-all_data <- data.frame()
-
-# Set initial pagination parameters
-size <- 1000
-search_after <- NULL
-has_more_data <- TRUE
-
-# Loop through pages
-while (has_more_data) {
-  # Create query parameters
-  query_params <- list(size = size)
-  if (!is.null(search_after)) {
-    query_params$`search-after` <- search_after
-  }
-  
-  # Make the API request
-  response <- GET(api_endpoint, add_headers(Authorization = auth_header), query = query_params)
-  
-  # Check if the request was successful
+# Function to handle errors
+handle_error <- function(response, context) {
   if (status_code(response) != 200) {
-    stop("API request failed with status: ", status_code(response))
+    stop("Error in ", context, ": HTTP ", status_code(response))
   }
-  
-  # Parse the response
-  data <- content(response, as = "text", encoding = "UTF-8")
-  data_df <- fromJSON(data)
-  
-  # Append to the all_data dataframe
-  all_data <- bind_rows(all_data, data_df)
-  
-  # Check if there are more pages
-  search_after <- headers(response)[["x-next-search-after"]]
-  has_more_data <- !is.null(search_after)
 }
 
-# Fetch recommendations for each certificate
-recommendations <- data.frame()
-for (lmk_key in all_data$lmk_key) {
-  rec_url <- paste0(rec_endpoint, "/", lmk_key)
-  rec_response <- GET(rec_url, add_headers(Authorization = auth_header))
+# Function to fetch all non-domestic certificates
+fetch_certificates <- function(size = 1000) {
+  all_data <- list()
+  search_after <- NULL
+  has_more_data <- TRUE
   
-  if (status_code(rec_response) == 200) {
-    rec_data <- content(rec_response, as = "text", encoding = "UTF-8")
-    rec_df <- fromJSON(rec_data)
-    recommendations <- bind_rows(recommendations, rec_df)
+  while (has_more_data) {
+    query_params <- list(size = size)
+    if (!is.null(search_after)) {
+      query_params$`search-after` <- search_after
+    }
+    
+    response <- GET(api_endpoint, 
+                    add_headers(Authorization = auth_header, Accept = "application/json"), 
+                    query = query_params)
+    
+    handle_error(response, "Non-domestic Search API")
+    
+    data <- content(response, as = "parsed")
+    all_data <- append(all_data, list(data))
+    
+    search_after <- headers(response)[["x-next-search-after"]]
+    has_more_data <- !is.null(search_after)
   }
+  
+  # Flatten the list of data frames into one data frame
+  all_data_df <- bind_rows(map(all_data, as_tibble), .id = "source")
+  
+  return(all_data_df)
 }
+
+# Function to fetch recommendations for certificates
+fetch_recommendations <- function(certificates) {
+  recommendations <- list()
+  
+  for (lmk_key in certificates$lmk_key) {
+    rec_url <- paste0(rec_endpoint, "/", lmk_key)
+    rec_response <- GET(rec_url, add_headers(Authorization = auth_header, Accept = "application/json"))
+    
+    if (status_code(rec_response) == 200) {
+      rec_data <- content(rec_response, as = "parsed")
+      recommendations <- append(recommendations, list(rec_data))
+    } else if (status_code(rec_response) == 404) {
+      # No recommendations found for LMK key
+    } else {
+      handle_error(rec_response, paste("Recommendations API for LMK key:", lmk_key))
+    }
+  }
+  
+  # Flatten the list of data frames into one data frame
+  recommendations_df <- bind_rows(map(recommendations, as_tibble), .id = "source")
+  
+  return(recommendations_df)
+}
+
+# Fetch certificates and recommendations
+all_data <- fetch_certificates()
+recommendations <- fetch_recommendations(all_data)
 
 # Save the combined data to CSV files
 write.csv(all_data, "non_domestic_certificates.csv", row.names = FALSE)
