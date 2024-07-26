@@ -50,3 +50,6 @@ rsconnect/
 
 # Ignore the configuration file
 config.json
+
+# Ignotre PDFs
+*.pdf
