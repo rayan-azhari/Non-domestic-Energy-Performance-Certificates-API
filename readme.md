@@ -5,7 +5,7 @@ date: "2024-07-26"
 output: html_document
 ---
 
-# EPC Certificates Fetcher
+# Non domestic EPC Certificates Fetcher
 
 This R script fetches Energy Performance Certificate (EPC) data from the [Open Data Communities EPC API](https://epc.opendatacommunities.org/) and retrieves recommendations associated with each certificate. The script supports fetching all EPC certificates within a specified date range using pagination.
 
