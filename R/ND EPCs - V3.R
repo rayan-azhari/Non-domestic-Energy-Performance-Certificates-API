@@ -104,9 +104,9 @@ fetch_recommendations <- function(lmk_key) {
 }
 
 # Main script
-from_year <- 2021
+from_year <- 2010
 from_month <- 1
-to_year <- 2021
+to_year <- 2024
 to_month <- 1
 
 # Fetch all EPC certificates
